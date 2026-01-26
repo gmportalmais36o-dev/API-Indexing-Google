@@ -1,0 +1,41 @@
+name: Google Indexing + Sitemap Ping
+on:
+  schedule:
+    - cron: "*/10 * * * *" # A cada 10 minutos
+  workflow_dispatch:
+jobs:
+  index_and_ping:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 📥 Checkout do repositório
+        uses: actions/checkout@v4
+      - name: 🔧 Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: 📦 Instalar dependências
+        run: npm install axios google-auth-library xml2js
+      - name: 🚀 Executar script
+        env:
+          GSA_CLIENT_EMAIL: ${{ secrets.GSA_CLIENT_EMAIL }}
+          GSA_PRIVATE_KEY: ${{ secrets.GSA_PRIVATE_KEY }}
+          INDEXNOW_KEY: ${{ secrets.INDEXNOW_KEY }}
+        run: |
+          echo "Iniciando execução..."
+          node scripts/generate-and-publish.js
+      - name: 📝 Configurar Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+      - name: 💾 Commit e push das alterações
+        run: |
+          if git diff --quiet .last_sent.json; then
+            echo "ℹ️ Nenhuma alteração no histórico de URLs"
+          else
+            echo "📤 Atualizando histórico de URLs..."
+            git add .last_sent.json
+            git commit -m "🔄 Atualizar histórico de URLs indexadas"
+            git push
+          fi
